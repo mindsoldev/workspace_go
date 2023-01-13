@@ -1,0 +1,364 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>rest_and_test: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">rest_and_test/app.go (72.7%)</option>
+				
+				<option value="file1">rest_and_test/main.go (0.0%)</option>
+				
+				<option value="file2">rest_and_test/model.go (72.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "database/sql"
+        "encoding/json"
+        "fmt"
+        "log"
+        "net/http"
+        "strconv"
+
+        _ "github.com/go-sql-driver/mysql"
+        "github.com/gorilla/mux"
+)
+
+type App struct {
+        Router *mux.Router
+        DB     *sql.DB
+}
+
+func (a *App) Initialize(user, password, address, dbname string) <span class="cov8" title="1">{
+        connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s", user, password, address, dbname)
+        var err error
+        db, err := sql.Open("mysql", connectionString)
+        a.DB = db
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+
+        <span class="cov8" title="1">a.Router = mux.NewRouter()
+
+        a.initializeRoutes()</span>
+}
+
+func (a *App) Run(addr string) {<span class="cov0" title="0">}</span>
+
+func (a *App) getProduct(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        vars := mux.Vars(r)
+        id, err := strconv.Atoi(vars["id"])
+        if err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusBadRequest, "Invalid product ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">p := product{ID: id}
+        if err := p.getProduct(a.DB); err != nil </span><span class="cov8" title="1">{
+                switch err </span>{
+                case sql.ErrNoRows:<span class="cov8" title="1">
+                        respondWithError(w, http.StatusNotFound, "Product not found")</span>
+                default:<span class="cov0" title="0">
+                        respondWithError(w, http.StatusInternalServerError, err.Error())</span>
+                }
+                <span class="cov8" title="1">return</span>
+        }
+
+        <span class="cov8" title="1">respondWithJSON(w, http.StatusOK, p)</span>
+}
+
+func respondWithError(w http.ResponseWriter, code int, message string) <span class="cov8" title="1">{
+        respondWithJSON(w, code, map[string]string{"error": message})
+}</span>
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) <span class="cov8" title="1">{
+        response, _ := json.Marshal(payload)
+
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(code)
+        w.Write(response)
+}</span>
+
+func (a *App) getProducts(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        count, _ := strconv.Atoi(r.FormValue("count"))
+        start, _ := strconv.Atoi(r.FormValue("start"))
+
+        if count &gt; 10 || count &lt; 1 </span><span class="cov8" title="1">{
+                count = 10
+        }</span>
+        <span class="cov8" title="1">if start &lt; 0 </span><span class="cov0" title="0">{
+                start = 0
+        }</span>
+
+        <span class="cov8" title="1">products, err := getProducts(a.DB, start, count)
+        if err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusInternalServerError, err.Error())
+                return
+        }</span>
+
+        <span class="cov8" title="1">respondWithJSON(w, http.StatusOK, products)</span>
+}
+
+func (a *App) createProduct(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        var p product
+        decoder := json.NewDecoder(r.Body)
+        if err := decoder.Decode(&amp;p); err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusBadRequest, "Invalid request payload")
+                return
+        }</span>
+        <span class="cov8" title="1">defer r.Body.Close()
+
+        if err := p.createProduct(a.DB); err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusInternalServerError, err.Error())
+                return
+        }</span>
+
+        <span class="cov8" title="1">respondWithJSON(w, http.StatusCreated, p)</span>
+}
+
+func (a *App) updateProduct(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        vars := mux.Vars(r)
+        id, err := strconv.Atoi(vars["id"])
+        if err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusBadRequest, "Invalid product ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var p product
+        decoder := json.NewDecoder(r.Body)
+        if err := decoder.Decode(&amp;p); err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusBadRequest, "Invalid resquest payload")
+                return
+        }</span>
+        <span class="cov8" title="1">defer r.Body.Close()
+        p.ID = id
+
+        if err := p.updateProduct(a.DB); err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusInternalServerError, err.Error())
+                return
+        }</span>
+
+        <span class="cov8" title="1">respondWithJSON(w, http.StatusOK, p)</span>
+}
+
+func (a *App) deleteProduct(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        vars := mux.Vars(r)
+        id, err := strconv.Atoi(vars["id"])
+        if err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusBadRequest, "Invalid Product ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">p := product{ID: id}
+        if err := p.deleteProduct(a.DB); err != nil </span><span class="cov0" title="0">{
+                respondWithError(w, http.StatusInternalServerError, err.Error())
+                return
+        }</span>
+
+        <span class="cov8" title="1">respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})</span>
+}
+
+func (a *App) initializeRoutes() <span class="cov8" title="1">{
+        a.Router.HandleFunc("/products", a.getProducts).Methods("GET")
+        a.Router.HandleFunc("/product", a.createProduct).Methods("POST")
+        a.Router.HandleFunc("/product/{id:[0-9]+}", a.getProduct).Methods("GET")
+        a.Router.HandleFunc("/product/{id:[0-9]+}", a.updateProduct).Methods("PUT")
+        a.Router.HandleFunc("/product/{id:[0-9]+}", a.deleteProduct).Methods("DELETE")
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import "os"
+
+func main() <span class="cov0" title="0">{
+
+        os.Setenv("APP_DB_USERNAME", "gouser")
+        os.Setenv("APP_DB_PASSWORD", "gopassword")
+        os.Setenv("APP_DB_PASSADDRESS", "127.0.0.1:3306")
+        os.Setenv("APP_DB_NAME", "gotest")
+        os.Setenv("APP_DB_ADDRESS", "127.0.0.1:3306")
+
+        a := App{}
+        a.Initialize(
+                os.Getenv("APP_DB_USERNAME"),
+                os.Getenv("APP_DB_PASSWORD"),
+                os.Getenv("APP_DB_ADDRESS"),
+                os.Getenv("APP_DB_NAME"))
+
+        a.Run(":8010")
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package main
+
+import (
+        "database/sql"
+)
+
+type product struct {
+        ID    int     `json:"id"`
+        Name  string  `json:"name"`
+        Price float64 `json:"price"`
+}
+
+func (p *product) getProduct(db *sql.DB) error <span class="cov8" title="1">{
+        return db.QueryRow("SELECT name, price FROM products WHERE id=?",
+                p.ID).Scan(&amp;p.Name, &amp;p.Price)
+}</span>
+
+func (p *product) updateProduct(db *sql.DB) error <span class="cov8" title="1">{
+        _, err :=
+                db.Exec("UPDATE products SET name=?, price=? WHERE id=?",
+                        p.Name, p.Price, p.ID)
+
+        return err
+}</span>
+
+func (p *product) deleteProduct(db *sql.DB) error <span class="cov8" title="1">{
+        _, err := db.Exec("DELETE FROM products WHERE id=?", p.ID)
+
+        return err
+}</span>
+
+func (p *product) createProduct(db *sql.DB) error <span class="cov8" title="1">{
+        /*
+                err := db.QueryRow(
+                        "INSERT INTO products(name, price) VALUES(?, ?) RETURNING id",
+                        p.Name, p.Price).Scan(&amp;p.ID)
+        */
+        cmd := "INSERT INTO products(name, price) VALUES(?, ?)"
+        result, err := db.Exec(cmd, p.Name, p.Price)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">id, err := result.LastInsertId()
+
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">p.ID = int(id)
+
+        return nil</span>
+}
+
+func getProducts(db *sql.DB, start, count int) ([]product, error) <span class="cov8" title="1">{
+        rows, err := db.Query(
+                "SELECT id, name,  price FROM products LIMIT ? OFFSET ?", count, start)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">defer rows.Close()
+
+        products := []product{}
+
+        for rows.Next() </span><span class="cov0" title="0">{
+                var p product
+                if err := rows.Scan(&amp;p.ID, &amp;p.Name, &amp;p.Price); err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">products = append(products, p)</span>
+        }
+
+        <span class="cov8" title="1">return products, nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
