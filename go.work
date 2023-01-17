@@ -2,6 +2,7 @@ go 1.19
 
 use (
 	./hello
+	./iszt_test
 	./rest-sql
 	./rest_and_test
 	./web-service-gin
