@@ -77,7 +77,7 @@ func main() {
 	// serve the app
 	fmt.Println("Server listen at 8080")
 	checkSqlVesion()
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Print(http.ListenAndServe(":8080", router))
 }
 
 // Function for handling messages
@@ -148,6 +148,7 @@ func GetMovieByID(w http.ResponseWriter, r *http.Request) {
 		response = JsonResponse{Type: "error", Message: "You are missing movieID parameter."}
 	} else {
 		db := setupDB()
+		defer db.Close()
 
 		printMessage("Get a movie from DB")
 
@@ -192,6 +193,7 @@ func CreateMovie(w http.ResponseWriter, r *http.Request) {
 		response = JsonResponse{Type: "error", Message: "You are missing movieID or movieName parameter."}
 	} else {
 		db := setupDB()
+		defer db.Close()
 
 		printMessage("Inserting movie into DB")
 
@@ -223,6 +225,7 @@ func DeleteMovie(w http.ResponseWriter, r *http.Request) {
 		response = JsonResponse{Type: "error", Message: "You are missing movieID parameter."}
 	} else {
 		db := setupDB()
+		defer db.Close()
 
 		printMessage("Deleting movie from DB")
 
@@ -242,6 +245,7 @@ func DeleteMovie(w http.ResponseWriter, r *http.Request) {
 // response and request handlers
 func DeleteMovies(w http.ResponseWriter, r *http.Request) {
 	db := setupDB()
+	defer db.Close()
 
 	printMessage("Deleting all movies...")
 
