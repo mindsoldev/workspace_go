@@ -7,75 +7,96 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func main() {
-	getCurrentForecast()
-	getLasttTenDaysForecast()
-	getHistoricalForecast("2023-01-10", "2023-01-12")
+	createForecastURL()
+	printResult(getCurrentForecast(ForecastURL))
+	createLastTenDaysURL()
+	printResult(getLasttTenDaysForecast(LastTenDaysURL))
+	createHistoricalURLTemplate()
+	printResult(getHistoricalForecast(HistoricalURLTemplate, "2023-01-10", "2023-01-12"))
 }
 
-var forecastURL string = "https://api.open-meteo.com/v1/forecast"
-var lastTenDaysURL string = "https://api.open-meteo.com/v1/forecast"
-var historicalURL string = "https://archive-api.open-meteo.com/v1/era5"
+var ForecastURL string
+var LastTenDaysURL string
+var HistoricalURLTemplate string
 
 var latitude string = "47.497913"
 var longitude string = "19.040236"
 
-func getCurrentForecast() {
-	requestURL := forecastURL + "?" + "latitude=" + latitude + "&longitude=" + longitude
-	requestURL += "&current_weather=true"
+const startDateMarker string = "<startDate>"
+const endDateMarker string = "<endDate>"
+
+func createForecastURL() {
+	ForecastURL += "https://api.open-meteo.com/v1/forecast"
+	ForecastURL += "?" + "latitude=" + latitude + "&longitude=" + longitude
+	ForecastURL += "&current_weather=true"
+}
+
+func createLastTenDaysURL() {
+	LastTenDaysURL += "https://api.open-meteo.com/v1/forecast"
+	LastTenDaysURL += "?" + "latitude=" + latitude + "&longitude=" + longitude
+	LastTenDaysURL += "&timezone=Europe/Budapest"
+	LastTenDaysURL += "&past_days=10"
+	LastTenDaysURL += "&daily=temperature_2m_min,temperature_2m_max"
+}
+
+func createHistoricalURLTemplate() {
+	HistoricalURLTemplate += "https://archive-api.open-meteo.com/v1/era5"
+	HistoricalURLTemplate += "?" + "latitude=" + latitude + "&longitude=" + longitude
+	HistoricalURLTemplate += "&timezone=Europe/Budapest"
+	HistoricalURLTemplate += "&start_date=" + startDateMarker
+	HistoricalURLTemplate += "&end_date=" + endDateMarker
+	HistoricalURLTemplate += "&daily=temperature_2m_min,temperature_2m_max"
+}
+
+func getCurrentForecast(requestURL string) (bool, string, []byte) {
 	log.Println("Current forecast URL: " + requestURL)
 
 	response := executeQuery(requestURL)
 	defer response.Body.Close()
 
-	if response.StatusCode == http.StatusOK {
-		bodyBytes := readBody(response)
+	bodyBytes := readBody(response)
 
-		formattedBodyBytes := formatJson(bodyBytes)
+	formattedBodyBytes := formatJson(bodyBytes)
 
-		fmt.Printf("\nCurrent forecast:\n%s\n\n", formattedBodyBytes)
-	}
+	hasError := hasErrorInResponseBody(formattedBodyBytes)
+
+	return hasError, "Current forecast", formattedBodyBytes
 }
 
-func getLasttTenDaysForecast() {
-	requestURL := lastTenDaysURL + "?" + "latitude=" + latitude + "&longitude=" + longitude
-	requestURL += "&timezone=Europe/Budapest"
-	requestURL += "&past_days=10"
-	requestURL += "&daily=temperature_2m_min,temperature_2m_max"
+func getLasttTenDaysForecast(requestURL string) (bool, string, []byte) {
 	log.Println("Last ten days forecast URL: " + requestURL)
 
 	response := executeQuery(requestURL)
 	defer response.Body.Close()
 
-	if response.StatusCode == http.StatusOK {
-		bodyBytes := readBody(response)
+	bodyBytes := readBody(response)
 
-		formattedBodyBytes := formatJson(bodyBytes)
+	formattedBodyBytes := formatJson(bodyBytes)
 
-		fmt.Printf("\nLast ten days forecast: \n%s\n\n", formattedBodyBytes)
-	}
+	hasError := hasErrorInResponseBody(formattedBodyBytes)
+
+	return hasError, "Last ten days forecast", formattedBodyBytes
 }
 
-func getHistoricalForecast(startDate string, endDate string) {
-	requestURL := historicalURL + "?" + "latitude=" + latitude + "&longitude=" + longitude
-	requestURL += "&timezone=Europe/Budapest"
-	requestURL += "&start_date=" + startDate
-	requestURL += "&end_date=" + endDate
-	requestURL += "&daily=temperature_2m_min,temperature_2m_max"
+func getHistoricalForecast(requestURL string, startDate string, endDate string) (bool, string, []byte) {
+	requestURL = strings.Replace(requestURL, startDateMarker, startDate, 1)
+	requestURL = strings.Replace(requestURL, endDateMarker, endDate, 1)
 	log.Println("Forecast history URL: " + requestURL)
 
 	response := executeQuery(requestURL)
 	defer response.Body.Close()
 
-	if response.StatusCode == http.StatusOK {
-		bodyBytes := readBody(response)
+	bodyBytes := readBody(response)
 
-		formattedBodyBytes := formatJson(bodyBytes)
+	formattedBodyBytes := formatJson(bodyBytes)
 
-		fmt.Printf("\nHistorical forecast from: %s to %s:\n%s\n\n", startDate, endDate, formattedBodyBytes)
-	}
+	hasError := hasErrorInResponseBody(formattedBodyBytes)
+
+	return hasError, "Historical forecast", formattedBodyBytes
 }
 
 func executeQuery(requestURL string) *http.Response {
@@ -103,4 +124,19 @@ func formatJson(jsonBytes []byte) []byte {
 		log.Fatal(err)
 	}
 	return res.Bytes()
+}
+
+func hasErrorInResponseBody(formattedBodyBytes []byte) bool {
+	var result map[string]any
+	json.Unmarshal([]byte(formattedBodyBytes), &result)
+	_, hasError := result["error"]
+	return hasError
+}
+
+func printResult(hasError bool, message string, result []byte) {
+	errorMessage := ""
+	if hasError {
+		errorMessage = " error"
+	}
+	fmt.Printf("\n%s%s:\n%s\n\n", message, errorMessage, result)
 }
