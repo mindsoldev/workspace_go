@@ -8,51 +8,86 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
-
-func main() {
-	createForecastURL()
-	printResult(getCurrentForecast(ForecastURL))
-	createLastTenDaysURL()
-	printResult(getLasttTenDaysForecast(LastTenDaysURL))
-	createHistoricalURLTemplate()
-	printResult(getHistoricalForecast(HistoricalURLTemplate, "2023-01-10", "2023-01-12"))
-}
-
-var ForecastURL string
-var LastTenDaysURL string
-var HistoricalURLTemplate string
-
-var latitude string = "47.497913"
-var longitude string = "19.040236"
 
 const startDateMarker string = "<startDate>"
 const endDateMarker string = "<endDate>"
 
-func createForecastURL() {
-	ForecastURL += "https://api.open-meteo.com/v1/forecast"
-	ForecastURL += "?" + "latitude=" + latitude + "&longitude=" + longitude
-	ForecastURL += "&current_weather=true"
+type forecastApi struct {
+	ForecastURL           *string
+	LastTenDaysURL        *string
+	HistoricalURLTemplate *string
+	latitude              *string
+	longitude             *string
+	refDate               *time.Time
 }
 
-func createLastTenDaysURL() {
-	LastTenDaysURL += "https://api.open-meteo.com/v1/forecast"
-	LastTenDaysURL += "?" + "latitude=" + latitude + "&longitude=" + longitude
-	LastTenDaysURL += "&timezone=Europe/Budapest"
-	LastTenDaysURL += "&past_days=10"
-	LastTenDaysURL += "&daily=temperature_2m_min,temperature_2m_max"
+/*
+	type dataEntry struct {
+		dataLabel string
+		value     float32
+	}
+
+	type dayEntry struct {
+		dayLabel    string
+		dataEntries []dataEntry
+	}
+
+	type forecast struct {
+		dayEntrys []dayEntry
+	}
+*/
+func main() {
+	forecastApi := new(forecastApi)
+	emptyString := ""
+	forecastApi.ForecastURL = &emptyString
+	forecastApi.LastTenDaysURL = &emptyString
+	forecastApi.HistoricalURLTemplate = &emptyString
+	forecastApi.HistoricalURLTemplate = &emptyString
+	lattitude := "47.497913"
+	forecastApi.latitude = &lattitude
+	longitude := "19.040236"
+	forecastApi.longitude = &longitude
+	now := time.Now()
+	forecastApi.refDate = &now
+
+	createForecastURL(*forecastApi)
+	printResult(getCurrentForecast(*forecastApi))
+	createLastTenDaysURL(*forecastApi)
+	printResult(getLasttTenDaysForecast(*forecastApi))
+	createHistoricalURLTemplate(*forecastApi)
+	printResult(getHistoricalForecast(*forecastApi, "2023-01-10", "2023-01-12"))
 }
 
-func createHistoricalURLTemplate() {
-	HistoricalURLTemplate += "https://archive-api.open-meteo.com/v1/era5"
-	HistoricalURLTemplate += "?" + "latitude=" + latitude + "&longitude=" + longitude
-	HistoricalURLTemplate += "&timezone=Europe/Budapest"
-	HistoricalURLTemplate += "&start_date=" + startDateMarker
-	HistoricalURLTemplate += "&end_date=" + endDateMarker
-	HistoricalURLTemplate += "&daily=temperature_2m_min,temperature_2m_max"
+func createForecastURL(forecastApi forecastApi) {
+	forecastURL := "https://api.open-meteo.com/v1/forecast"
+	forecastURL += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
+	forecastURL += "&current_weather=true"
+	*forecastApi.ForecastURL = forecastURL
 }
 
-func getCurrentForecast(requestURL string) (bool, string, []byte) {
+func createLastTenDaysURL(forecastApi forecastApi) {
+	lastTenDaysURL := "https://api.open-meteo.com/v1/forecast"
+	lastTenDaysURL += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
+	lastTenDaysURL += "&timezone=Europe/Budapest"
+	lastTenDaysURL += "&past_days=10"
+	lastTenDaysURL += "&daily=temperature_2m_min,temperature_2m_max"
+	*forecastApi.LastTenDaysURL = lastTenDaysURL
+}
+
+func createHistoricalURLTemplate(forecastApi forecastApi) {
+	historicalURLTemplate := "https://archive-api.open-meteo.com/v1/era5"
+	historicalURLTemplate += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
+	historicalURLTemplate += "&timezone=Europe/Budapest"
+	historicalURLTemplate += "&start_date=" + startDateMarker
+	historicalURLTemplate += "&end_date=" + endDateMarker
+	historicalURLTemplate += "&daily=temperature_2m_min,temperature_2m_max"
+	*forecastApi.HistoricalURLTemplate = historicalURLTemplate
+}
+
+func getCurrentForecast(forecastApi forecastApi) (bool, string, []byte) {
+	requestURL := *forecastApi.ForecastURL
 	log.Println("Current forecast URL: " + requestURL)
 
 	response := executeQuery(requestURL)
@@ -67,7 +102,8 @@ func getCurrentForecast(requestURL string) (bool, string, []byte) {
 	return hasError, "Current forecast", formattedBodyBytes
 }
 
-func getLasttTenDaysForecast(requestURL string) (bool, string, []byte) {
+func getLasttTenDaysForecast(forecastApi forecastApi) (bool, string, []byte) {
+	requestURL := *forecastApi.LastTenDaysURL
 	log.Println("Last ten days forecast URL: " + requestURL)
 
 	response := executeQuery(requestURL)
@@ -82,7 +118,8 @@ func getLasttTenDaysForecast(requestURL string) (bool, string, []byte) {
 	return hasError, "Last ten days forecast", formattedBodyBytes
 }
 
-func getHistoricalForecast(requestURL string, startDate string, endDate string) (bool, string, []byte) {
+func getHistoricalForecast(forecastApi forecastApi, startDate string, endDate string) (bool, string, []byte) {
+	requestURL := *forecastApi.HistoricalURLTemplate
 	requestURL = strings.Replace(requestURL, startDateMarker, startDate, 1)
 	requestURL = strings.Replace(requestURL, endDateMarker, endDate, 1)
 	log.Println("Forecast history URL: " + requestURL)
@@ -98,6 +135,12 @@ func getHistoricalForecast(requestURL string, startDate string, endDate string) 
 
 	return hasError, "Historical forecast", formattedBodyBytes
 }
+
+/*
+func getMinusPlusOneDayForecast() {
+
+}
+*/
 
 func executeQuery(requestURL string) *http.Response {
 	response, err := http.Get(requestURL)
