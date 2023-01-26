@@ -61,99 +61,12 @@ func main() {
 	forecastApi.dailyResultParts = &dailyResultParts
 	forecastApi.timeNames = &[]string{"past", "now", "future"}
 
-	/*
-		createForecastURL(*forecastApi)
-		printResult(getCurrentForecast(*forecastApi))
-		createLastTenDaysURL(*forecastApi)
-		printResult(getLasttTenDaysForecast(*forecastApi))
-		createHistoricalURLTemplate(*forecastApi)
-		printResult(getHistoricalForecast(*forecastApi, "2023-01-10", "2023-01-12"))
-	*/
 	createMinusPlusOneDayURLTemplate(*forecastApi)
 	printResult(getMinusPlusOneDayForecast(*forecastApi))
 	os.Exit(1)
 }
 
-/*
-func createForecastURL(forecastApi forecastApi) {
-	forecastURL := "https://api.open-meteo.com/v1/forecast"
-	forecastURL += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
-	forecastURL += "&current_weather=true"
-	*forecastApi.ForecastURL = forecastURL
-}
-
-func createLastTenDaysURL(forecastApi forecastApi) {
-	lastTenDaysURL := "https://api.open-meteo.com/v1/forecast"
-	lastTenDaysURL += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
-	lastTenDaysURL += "&timezone=Europe/Budapest"
-	lastTenDaysURL += "&past_days=10"
-	lastTenDaysURL += "&daily=temperature_2m_min,temperature_2m_max"
-	*forecastApi.LastTenDaysURL = lastTenDaysURL
-}
-
-func createHistoricalURLTemplate(forecastApi forecastApi) {
-	historicalURLTemplate := "https://archive-api.open-meteo.com/v1/era5"
-	historicalURLTemplate += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
-	historicalURLTemplate += "&timezone=Europe/Budapest"
-	historicalURLTemplate += "&start_date=" + startDateMarker
-	historicalURLTemplate += "&end_date=" + endDateMarker
-	historicalURLTemplate += "&daily=temperature_2m_min,temperature_2m_max"
-	*forecastApi.HistoricalURLTemplate = historicalURLTemplate
-}
-
-func getCurrentForecast(forecastApi forecastApi) (bool, string, []byte) {
-	requestURL := *forecastApi.ForecastURL
-	log.Println("Current forecast URL: " + requestURL)
-
-	response := executeQuery(requestURL)
-	defer response.Body.Close()
-
-	bodyBytes := readBody(response)
-
-	formattedBodyBytes := formatJson(bodyBytes)
-
-	hasError := hasErrorInResponseBody(formattedBodyBytes)
-
-	return hasError, "Current forecast", formattedBodyBytes
-}
-
-func getLasttTenDaysForecast(forecastApi forecastApi) (bool, string, []byte) {
-	requestURL := *forecastApi.LastTenDaysURL
-	log.Println("Last ten days forecast URL: " + requestURL)
-
-	response := executeQuery(requestURL)
-	defer response.Body.Close()
-
-	bodyBytes := readBody(response)
-
-	formattedBodyBytes := formatJson(bodyBytes)
-
-	hasError := hasErrorInResponseBody(formattedBodyBytes)
-
-	return hasError, "Last ten days forecast", formattedBodyBytes
-}
-
-func getHistoricalForecast(forecastApi forecastApi, startDate string, endDate string) (bool, string, []byte) {
-	requestURL := *forecastApi.HistoricalURLTemplate
-	requestURL = strings.Replace(requestURL, startDateMarker, startDate, 1)
-	requestURL = strings.Replace(requestURL, endDateMarker, endDate, 1)
-	log.Println("Forecast history URL: " + requestURL)
-
-	response := executeQuery(requestURL)
-	defer response.Body.Close()
-
-	bodyBytes := readBody(response)
-
-	formattedBodyBytes := formatJson(bodyBytes)
-
-	hasError := hasErrorInResponseBody(formattedBodyBytes)
-
-	return hasError, "Historical forecast", formattedBodyBytes
-}
-*/
-
 func createMinusPlusOneDayURLTemplate(forecastApi forecastApi) {
-	// https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&daily=temperature_2m_max&timezone=Europe%2FBerlin&start_date=2023-01-23&end_date=2023-01-25
 	historicalURLTemplate := "https://api.open-meteo.com/v1/forecast"
 	historicalURLTemplate += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
 	historicalURLTemplate += "&timezone=Europe/Budapest"
@@ -171,7 +84,7 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 	requestURL = strings.Replace(requestURL, endDateMarker, endDate.Format("2006-01-02"), 1)
 	dailyResultTemplate := createDailyResultTemplate(*forecastApi.dailyResultParts)
 	requestURL = strings.Replace(requestURL, dailyresultMarker, dailyResultTemplate, 1)
-	log.Println("Minus-plus one day forecast URL: " + requestURL)
+	//log.Println("Minus-plus one day forecast URL: " + requestURL)
 
 	response := executeQuery(requestURL)
 	defer response.Body.Close()
@@ -179,7 +92,6 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 	bodyBytes := readBody(response)
 
 	formattedBodyBytes := formatJson(bodyBytes)
-
 	hasError := hasErrorInResponseBody(formattedBodyBytes)
 
 	var result map[string]interface{}
@@ -188,7 +100,6 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 	daily := result["daily"]
 
 	var dataItems []dataEntry
-	// for i := 0; i < len(*forecastApi.dailyResultParts); i++ {
 	for _, partTitle := range *forecastApi.dailyResultParts {
 		dataItems = append(dataItems, createDataItem(daily, partTitle, forecastApi))
 	}
@@ -205,13 +116,11 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 	forecast := forecastEntry{
 		DayEntries: dayItems,
 	}
-	fmt.Println(forecast)
-	js, err := json.Marshal(forecast)
-	fmt.Println(js, err)
-	jsf := formatJson(js)
-	//fmt.Println(jsf)
 
-	return hasError, "Minus-plus one day forecast:", jsf
+	resulBytearray := convertStructToJson(forecast)
+	formattedResulBytearray := formatJson(resulBytearray)
+
+	return hasError, "Minus-plus one day forecast:", formattedResulBytearray
 }
 
 func executeQuery(requestURL string) *http.Response {
@@ -278,4 +187,13 @@ func createDataItem(daily interface{}, partName string, forecastApi forecastApi)
 	}
 
 	return dataItem
+}
+
+func convertStructToJson(structure forecastEntry) []byte {
+	resulBytearray, err := json.Marshal(structure)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return resulBytearray
 }
