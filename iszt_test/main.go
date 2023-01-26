@@ -94,31 +94,37 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 	formattedBodyBytes := formatJson(bodyBytes)
 	hasError := hasErrorInResponseBody(formattedBodyBytes)
 
-	var result map[string]interface{}
-	json.Unmarshal([]byte(formattedBodyBytes), &result)
+	var formattedResulBytearray []byte
+	if !hasError {
 
-	daily := result["daily"]
+		var result map[string]interface{}
+		json.Unmarshal([]byte(formattedBodyBytes), &result)
 
-	var dataItems []dataEntry
-	for _, partTitle := range *forecastApi.dailyResultParts {
-		dataItems = append(dataItems, createDataItem(daily, partTitle, forecastApi))
-	}
+		daily := result["daily"]
 
-	var dayItems []dayEntry
-	for i := 0; i < 3; i++ {
-		dayItem := dayEntry{
-			DayLabel:    (*forecastApi.timeNames)[i],
-			DataEntries: dataItems,
+		var dataItems []dataEntry
+		for _, partTitle := range *forecastApi.dailyResultParts {
+			dataItems = append(dataItems, createDataItem(daily, partTitle, forecastApi))
 		}
-		dayItems = append(dayItems, dayItem)
-	}
 
-	forecast := forecastEntry{
-		DayEntries: dayItems,
-	}
+		var dayItems []dayEntry
+		for i := 0; i < 3; i++ {
+			dayItem := dayEntry{
+				DayLabel:    (*forecastApi.timeNames)[i],
+				DataEntries: dataItems,
+			}
+			dayItems = append(dayItems, dayItem)
+		}
 
-	resulBytearray := convertStructToJson(forecast)
-	formattedResulBytearray := formatJson(resulBytearray)
+		forecast := forecastEntry{
+			DayEntries: dayItems,
+		}
+
+		resulBytearray := convertForecastEntryToJson(forecast)
+		formattedResulBytearray = formatJson(resulBytearray)
+	} else {
+		formattedResulBytearray = formattedBodyBytes
+	}
 
 	return hasError, "Minus-plus one day forecast:", formattedResulBytearray
 }
@@ -189,7 +195,7 @@ func createDataItem(daily interface{}, partName string, forecastApi forecastApi)
 	return dataItem
 }
 
-func convertStructToJson(structure forecastEntry) []byte {
+func convertForecastEntryToJson(structure forecastEntry) []byte {
 	resulBytearray, err := json.Marshal(structure)
 	if err != nil {
 		log.Fatal(err)
