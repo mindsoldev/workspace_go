@@ -30,8 +30,6 @@ type forecastApi struct {
 }
 
 type DataEntries map[string]float64
-
-// type DayEntries map[string]DataEntries
 type DayEntries map[string]interface{}
 
 func main() {
@@ -118,7 +116,7 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 			}
 		}
 
-		resulBytearray := convertEtres1ToJson(days)
+		resulBytearray := convertResultMapToJson(days)
 		formattedResulBytearray = formatJson(resulBytearray)
 	} else {
 		formattedResulBytearray = formattedBodyBytes
@@ -182,7 +180,7 @@ func createDailyResultTemplate(dailyResultParts []string) string {
 	return dailyResultTemplate
 }
 
-func convertEtres1ToJson(structure DayEntries) []byte {
+func convertResultMapToJson(structure DayEntries) []byte {
 	resulBytearray, err := json.Marshal(structure)
 	if err != nil {
 		log.Fatal(err)
