@@ -28,19 +28,23 @@ type forecastApi struct {
 	timeNames                  *[]string
 }
 
-type dataEntry struct {
-	DataLabel string
-	Value     float64
-}
+/*
+	type dataEntry struct {
+		DataLabel string
+		Value     float64
+	}
 
-type dayEntry struct {
-	DayLabel    string
-	DataEntries []dataEntry
-}
+	type dayEntry struct {
+		DayLabel    string
+		DataEntries []dataEntry
+	}
 
-type forecastEntry struct {
-	DayEntries []dayEntry
-}
+	type forecastEntry struct {
+		DayEntries []dayEntry
+	}
+*/
+type DataEntries map[string]float64
+type DayEntries map[string]DataEntries
 
 func main() {
 	forecastApi := new(forecastApi)
@@ -62,8 +66,14 @@ func main() {
 	forecastApi.timeNames = &[]string{"past", "now", "future"}
 
 	createMinusPlusOneDayURLTemplate(*forecastApi)
-	printResult(getMinusPlusOneDayForecast(*forecastApi))
-	os.Exit(1)
+	hasError := printResult(getMinusPlusOneDayForecast(*forecastApi))
+	var exitCode int
+	if hasError {
+		exitCode = 1
+	} else {
+		exitCode = 0
+	}
+	os.Exit(exitCode)
 }
 
 func createMinusPlusOneDayURLTemplate(forecastApi forecastApi) {
@@ -100,33 +110,49 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 		var result map[string]interface{}
 		json.Unmarshal([]byte(formattedBodyBytes), &result)
 
-		daily := result["daily"]
+		/*
+			daily := result["daily"]
 
-		var dataItems []dataEntry
-		for _, partTitle := range *forecastApi.dailyResultParts {
-			dataItems = append(dataItems, createDataItem(daily, partTitle, forecastApi))
-		}
-
-		var dayItems []dayEntry
-		for i := 0; i < 3; i++ {
-			dayItem := dayEntry{
-				DayLabel:    (*forecastApi.timeNames)[i],
-				DataEntries: dataItems,
+			var dataItems []dataEntry
+			for _, partTitle := range *forecastApi.dailyResultParts {
+				dataItems = append(dataItems, createDataItem(daily, partTitle, forecastApi))
 			}
-			dayItems = append(dayItems, dayItem)
+
+			var dayItems []dayEntry
+			for i := 0; i < 3; i++ {
+				dayItem := dayEntry{
+					DayLabel:    (*forecastApi.timeNames)[i],
+					DataEntries: dataItems,
+				}
+				dayItems = append(dayItems, dayItem)
+			}
+
+			forecast := forecastEntry{
+				DayEntries: dayItems,
+			}
+		*/
+
+		daily := result["daily"]
+		Days := make(DayEntries)
+
+		for i := 0; i < 3; i++ {
+			dEntry := make(DataEntries)
+
+			for _, partTitle := range *forecastApi.dailyResultParts {
+				data := daily.(map[string]interface{})[partTitle].([]interface{})[0]
+				dEntry[partTitle] = data.(float64)
+			}
+
+			Days[(*forecastApi.timeNames)[i]] = dEntry
 		}
 
-		forecast := forecastEntry{
-			DayEntries: dayItems,
-		}
-
-		resulBytearray := convertForecastEntryToJson(forecast)
+		resulBytearray := convertEtres1ToJson(Days)
 		formattedResulBytearray = formatJson(resulBytearray)
 	} else {
 		formattedResulBytearray = formattedBodyBytes
 	}
 
-	return hasError, "Minus-plus one day forecast:", formattedResulBytearray
+	return hasError, "Minus-plus one day forecast", formattedResulBytearray
 }
 
 func executeQuery(requestURL string) *http.Response {
@@ -163,12 +189,14 @@ func hasErrorInResponseBody(formattedBodyBytes []byte) bool {
 	return hasError
 }
 
-func printResult(hasError bool, message string, result []byte) {
+func printResult(hasError bool, message string, result []byte) bool {
 	errorMessage := ""
 	if hasError {
 		errorMessage = " error"
 	}
 	fmt.Printf("\n%s%s:\n%s\n\n", message, errorMessage, result)
+
+	return hasError
 }
 
 func createDailyResultTemplate(dailyResultParts []string) string {
@@ -182,6 +210,7 @@ func createDailyResultTemplate(dailyResultParts []string) string {
 	return dailyResultTemplate
 }
 
+/*
 func createDataItem(daily interface{}, partName string, forecastApi forecastApi) dataEntry {
 
 	temperatures := daily.(map[string]interface{})[partName]
@@ -194,12 +223,42 @@ func createDataItem(daily interface{}, partName string, forecastApi forecastApi)
 
 	return dataItem
 }
+*/
 
-func convertForecastEntryToJson(structure forecastEntry) []byte {
-	resulBytearray, err := json.Marshal(structure)
+func convertEtres1ToJson(structure DayEntries) []byte {
+	resulBytearray, err := DayEntries.MarshalJSON(structure)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	return resulBytearray
+}
+
+func (entries DayEntries) MarshalJSON() ([]byte, error) {
+	// forrás: https://stackoverflow.com/questions/25182923/serialize-a-map-using-a-specific-order
+	var buf bytes.Buffer
+
+	first := true
+	buf.WriteString("{")
+	for key, value := range entries {
+		if !first {
+			buf.WriteString(",")
+		}
+		first = false
+
+		key, err := json.Marshal(key)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(key)
+		buf.WriteString(":")
+		val, err := json.Marshal(value)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(val)
+	}
+
+	buf.WriteString("}")
+	return buf.Bytes(), nil
 }
