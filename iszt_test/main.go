@@ -26,25 +26,13 @@ type forecastApi struct {
 	refDate                    *time.Time
 	dailyResultParts           *[]string
 	timeNames                  *[]string
+	packedToArrayTitles        *[]string
 }
 
-/*
-	type dataEntry struct {
-		DataLabel string
-		Value     float64
-	}
-
-	type dayEntry struct {
-		DayLabel    string
-		DataEntries []dataEntry
-	}
-
-	type forecastEntry struct {
-		DayEntries []dayEntry
-	}
-*/
 type DataEntries map[string]float64
-type DayEntries map[string]DataEntries
+
+// type DayEntries map[string]DataEntries
+type DayEntries map[string]interface{}
 
 func main() {
 	forecastApi := new(forecastApi)
@@ -60,10 +48,11 @@ func main() {
 	forecastApi.longitude = &longitude
 	now := time.Now()
 	forecastApi.refDate = &now
-	//dailyResultParts := []string{"temperature_2m_min", "temperature_2m_max"}
+	// dailyResultParts := []string{"temperature_2m_min", "temperature_2m_max"}
 	dailyResultParts := []string{"temperature_2m_max"}
 	forecastApi.dailyResultParts = &dailyResultParts
 	forecastApi.timeNames = &[]string{"past", "now", "future"}
+	forecastApi.packedToArrayTitles = &[]string{"past", "future"}
 
 	createMinusPlusOneDayURLTemplate(*forecastApi)
 	hasError := printResult(getMinusPlusOneDayForecast(*forecastApi))
@@ -110,43 +99,26 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 		var result map[string]interface{}
 		json.Unmarshal([]byte(formattedBodyBytes), &result)
 
-		/*
-			daily := result["daily"]
-
-			var dataItems []dataEntry
-			for _, partTitle := range *forecastApi.dailyResultParts {
-				dataItems = append(dataItems, createDataItem(daily, partTitle, forecastApi))
-			}
-
-			var dayItems []dayEntry
-			for i := 0; i < 3; i++ {
-				dayItem := dayEntry{
-					DayLabel:    (*forecastApi.timeNames)[i],
-					DataEntries: dataItems,
-				}
-				dayItems = append(dayItems, dayItem)
-			}
-
-			forecast := forecastEntry{
-				DayEntries: dayItems,
-			}
-		*/
-
 		daily := result["daily"]
-		Days := make(DayEntries)
+		days := make(DayEntries)
 
 		for i := 0; i < 3; i++ {
-			dEntry := make(DataEntries)
+			dataEntries := make(DataEntries)
 
 			for _, partTitle := range *forecastApi.dailyResultParts {
-				data := daily.(map[string]interface{})[partTitle].([]interface{})[0]
-				dEntry[partTitle] = data.(float64)
+				data := daily.(map[string]interface{})[partTitle].([]interface{})[i]
+				dataEntries[partTitle] = data.(float64)
 			}
 
-			Days[(*forecastApi.timeNames)[i]] = dEntry
+			title := (*forecastApi.timeNames)[i]
+			if Contains(*forecastApi.packedToArrayTitles, title) {
+				days[title] = []interface{}{dataEntries}
+			} else {
+				days[title] = dataEntries
+			}
 		}
 
-		resulBytearray := convertEtres1ToJson(Days)
+		resulBytearray := convertEtres1ToJson(days)
 		formattedResulBytearray = formatJson(resulBytearray)
 	} else {
 		formattedResulBytearray = formattedBodyBytes
@@ -210,23 +182,8 @@ func createDailyResultTemplate(dailyResultParts []string) string {
 	return dailyResultTemplate
 }
 
-/*
-func createDataItem(daily interface{}, partName string, forecastApi forecastApi) dataEntry {
-
-	temperatures := daily.(map[string]interface{})[partName]
-	temperature0 := temperatures.([]interface{})[0]
-
-	dataItem := dataEntry{
-		DataLabel: (*forecastApi.dailyResultParts)[0],
-		Value:     temperature0.(float64),
-	}
-
-	return dataItem
-}
-*/
-
 func convertEtres1ToJson(structure DayEntries) []byte {
-	resulBytearray, err := DayEntries.MarshalJSON(structure)
+	resulBytearray, err := json.Marshal(structure)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -234,31 +191,12 @@ func convertEtres1ToJson(structure DayEntries) []byte {
 	return resulBytearray
 }
 
-func (entries DayEntries) MarshalJSON() ([]byte, error) {
-	// forrás: https://stackoverflow.com/questions/25182923/serialize-a-map-using-a-specific-order
-	var buf bytes.Buffer
-
-	first := true
-	buf.WriteString("{")
-	for key, value := range entries {
-		if !first {
-			buf.WriteString(",")
+func Contains[T comparable](s []T, e T) bool {
+	// source: https://stackoverflow.com/questions/10485743/contains-method-for-a-slice
+	for _, v := range s {
+		if v == e {
+			return true
 		}
-		first = false
-
-		key, err := json.Marshal(key)
-		if err != nil {
-			return nil, err
-		}
-		buf.Write(key)
-		buf.WriteString(":")
-		val, err := json.Marshal(value)
-		if err != nil {
-			return nil, err
-		}
-		buf.Write(val)
 	}
-
-	buf.WriteString("}")
-	return buf.Bytes(), nil
+	return false
 }
