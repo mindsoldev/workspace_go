@@ -33,24 +33,7 @@ type DataEntries map[string]float64
 type DayEntries map[string]interface{}
 
 func main() {
-	forecastApi := new(forecastApi)
-	emptyString := ""
-	forecastApi.ForecastURL = &emptyString
-	forecastApi.LastTenDaysURL = &emptyString
-	forecastApi.HistoricalURLTemplate = &emptyString
-	forecastApi.HistoricalURLTemplate = &emptyString
-	forecastApi.MinusPlusOneDayURLTemplate = &emptyString
-	lattitude := "47.497913"
-	forecastApi.latitude = &lattitude
-	longitude := "19.040236"
-	forecastApi.longitude = &longitude
-	now := time.Now()
-	forecastApi.refDate = &now
-	// dailyResultParts := []string{"temperature_2m_min", "temperature_2m_max"}
-	dailyResultParts := []string{"temperature_2m_max"}
-	forecastApi.dailyResultParts = &dailyResultParts
-	forecastApi.timeNames = &[]string{"past", "now", "future"}
-	forecastApi.packedToArrayTitles = &[]string{"past", "future"}
+	forecastApi := initForecastApi()
 
 	createMinusPlusOneDayURLTemplate(*forecastApi)
 	hasError := printResult(getMinusPlusOneDayForecast(*forecastApi))
@@ -63,14 +46,37 @@ func main() {
 	os.Exit(exitCode)
 }
 
+func initForecastApi() *forecastApi {
+	forecastApi := new(forecastApi)
+	// emptyString := ""
+	forecastApi.ForecastURL = new(string)
+	// forecastApi.LastTenDaysURL = new(string)
+	// forecastApi.HistoricalURLTemplate = new(string)
+	// forecastApi.HistoricalURLTemplate = new(string)
+	forecastApi.MinusPlusOneDayURLTemplate = new(string)
+	lattitude := "47.497913"
+	forecastApi.latitude = &lattitude
+	longitude := "19.040236"
+	forecastApi.longitude = &longitude
+	now := time.Now()
+	forecastApi.refDate = &now
+	// dailyResultParts := []string{"temperature_2m_min", "temperature_2m_max"}
+	dailyResultParts := []string{"temperature_2m_max"}
+	forecastApi.dailyResultParts = &dailyResultParts
+	forecastApi.timeNames = &[]string{"past", "now", "future"}
+	forecastApi.packedToArrayTitles = &[]string{"past", "future"}
+
+	return forecastApi
+}
+
 func createMinusPlusOneDayURLTemplate(forecastApi forecastApi) {
-	historicalURLTemplate := "https://api.open-meteo.com/v1/forecast"
-	historicalURLTemplate += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
-	historicalURLTemplate += "&timezone=Europe/Budapest"
-	historicalURLTemplate += "&start_date=" + startDateMarker
-	historicalURLTemplate += "&end_date=" + endDateMarker
-	historicalURLTemplate += "&daily=" + dailyresultMarker
-	*forecastApi.HistoricalURLTemplate = historicalURLTemplate
+	minusPlusOneDayURLTemplate := "https://api.open-meteo.com/v1/forecast"
+	minusPlusOneDayURLTemplate += "?" + "latitude=" + *forecastApi.latitude + "&longitude=" + *forecastApi.longitude
+	minusPlusOneDayURLTemplate += "&timezone=Europe/Budapest"
+	minusPlusOneDayURLTemplate += "&start_date=" + startDateMarker
+	minusPlusOneDayURLTemplate += "&end_date=" + endDateMarker
+	minusPlusOneDayURLTemplate += "&daily=" + dailyresultMarker
+	*forecastApi.MinusPlusOneDayURLTemplate = minusPlusOneDayURLTemplate
 }
 
 func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) {
