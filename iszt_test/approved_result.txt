@@ -1,0 +1,15 @@
+{
+    "future": [
+        {
+            "temperature_2m_max": 1.7
+        }
+    ],
+    "now": {
+        "temperature_2m_max": 2.2
+    },
+    "past": [
+        {
+            "temperature_2m_max": 1.5
+        }
+    ]
+}

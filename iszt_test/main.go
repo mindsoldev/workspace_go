@@ -27,13 +27,20 @@ type forecastApi struct {
 	dailyResultParts           *[]string
 	timeNames                  *[]string
 	packedToArrayTitles        *[]string
+	createAprovedFiles         *bool
 }
 
 type DataEntries map[string]float64
 type DayEntries map[string]interface{}
 
 func main() {
+
 	forecastApi := initForecastApi()
+
+	if *forecastApi.createAprovedFiles {
+		saveApprovedResponse()
+		saveApprovedResult()
+	}
 
 	createMinusPlusOneDayURLTemplate(*forecastApi)
 	hasError := printResult(getMinusPlusOneDayForecast(*forecastApi))
@@ -48,11 +55,6 @@ func main() {
 
 func initForecastApi() *forecastApi {
 	forecastApi := new(forecastApi)
-	// emptyString := ""
-	forecastApi.ForecastURL = new(string)
-	// forecastApi.LastTenDaysURL = new(string)
-	// forecastApi.HistoricalURLTemplate = new(string)
-	// forecastApi.HistoricalURLTemplate = new(string)
 	forecastApi.MinusPlusOneDayURLTemplate = new(string)
 	lattitude := "47.497913"
 	forecastApi.latitude = &lattitude
@@ -65,6 +67,8 @@ func initForecastApi() *forecastApi {
 	forecastApi.dailyResultParts = &dailyResultParts
 	forecastApi.timeNames = &[]string{"past", "now", "future"}
 	forecastApi.packedToArrayTitles = &[]string{"past", "future"}
+	createAproved := false
+	forecastApi.createAprovedFiles = &createAproved
 
 	return forecastApi
 }
@@ -80,13 +84,7 @@ func createMinusPlusOneDayURLTemplate(forecastApi forecastApi) {
 }
 
 func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) {
-	requestURL := *forecastApi.MinusPlusOneDayURLTemplate
-	startDate := forecastApi.refDate.AddDate(0, 0, -1)
-	endDate := forecastApi.refDate.AddDate(0, 0, 1)
-	requestURL = strings.Replace(requestURL, startDateMarker, startDate.Format("2006-01-02"), 1)
-	requestURL = strings.Replace(requestURL, endDateMarker, endDate.Format("2006-01-02"), 1)
-	dailyResultTemplate := createDailyResultTemplate(*forecastApi.dailyResultParts)
-	requestURL = strings.Replace(requestURL, dailyresultMarker, dailyResultTemplate, 1)
+	requestURL := replaceParametersInUrlTemplate(forecastApi)
 	//log.Println("Minus-plus one day forecast URL: " + requestURL)
 
 	response := executeQuery(requestURL)
@@ -129,6 +127,18 @@ func getMinusPlusOneDayForecast(forecastApi forecastApi) (bool, string, []byte) 
 	}
 
 	return hasError, "Minus-plus one day forecast", formattedResulBytearray
+}
+
+func replaceParametersInUrlTemplate(forecastApi forecastApi) string {
+	requestURL := *forecastApi.MinusPlusOneDayURLTemplate
+	startDate := forecastApi.refDate.AddDate(0, 0, -1)
+	endDate := forecastApi.refDate.AddDate(0, 0, 1)
+	requestURL = strings.Replace(requestURL, startDateMarker, startDate.Format("2006-01-02"), 1)
+	requestURL = strings.Replace(requestURL, endDateMarker, endDate.Format("2006-01-02"), 1)
+	dailyResultTemplate := createDailyResultTemplate(*forecastApi.dailyResultParts)
+	requestURL = strings.Replace(requestURL, dailyresultMarker, dailyResultTemplate, 1)
+
+	return requestURL
 }
 
 func executeQuery(requestURL string) *http.Response {
