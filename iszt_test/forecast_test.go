@@ -18,7 +18,7 @@ var _ = Describe("Forecast", func() {
 				approvedContent, err := os.ReadFile("approved_response.txt")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				cleanedApprovedContent := cutOutGeneretionTime(string(approvedContent))
+				cleanedApprovedContent := removeGeneretionTime(string(approvedContent))
 
 				forecastApi := initForecastApi()
 				refDate := time.Date(2023, 01, 28, 12, 00, 00, 000, time.Local)
@@ -29,7 +29,7 @@ var _ = Describe("Forecast", func() {
 				body, err := io.ReadAll(response.Body)
 				defer response.Body.Close()
 
-				cleanedBody := cutOutGeneretionTime(string(body))
+				cleanedBody := removeGeneretionTime(string(body))
 
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(cleanedBody).To(Equal(cleanedApprovedContent))
@@ -56,7 +56,7 @@ var _ = Describe("Forecast", func() {
 	})
 })
 
-func cutOutGeneretionTime(text string) string {
-	s := regexp.MustCompile(`"generationtime_ms\".{21}`).Split(string(text), 2)
+func removeGeneretionTime(text string) string {
+	s := regexp.MustCompile(`"generationtime_ms\": ?[\d]{1}[.]{1}[\d]*,`).Split(string(text), 2)
 	return s[0] + s[1]
 }
