@@ -25,11 +25,13 @@ func main() {
 type stubMapping map[string]interface{}
 
 var StubStorage = stubMapping{
-	"Crawl_main":      Crawl_main,
-	"TreeComper_main": TreeComper_main,
-	"Fetch15":         Fetch15,
-	"Fetch17":         Fetch17,
-	"Fetch18":         Fetch18,
+	"crawl_main":      crawl_main,
+	"treeComper_main": treeComper_main,
+	"fetch15":         fetch15,
+	"fetch17":         fetch17,
+	"fetch18":         fetch18,
+	"fetch19":         fetch19,
+	"fetchAll":        fetchAll,
 }
 
 func Call(funcName string, params ...interface{}) (result interface{}, err error) {

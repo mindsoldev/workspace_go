@@ -39,8 +39,8 @@ func Same(t1, t2 *tree.Tree) bool {
 	return true
 }
 
-// Test it: go run . TreeComper_main
-func TreeComper_main() {
+// Test it: go run . treeComper_main
+func treeComper_main() {
 	fmt.Println(Same(tree.New(1), tree.New(1)))
 	fmt.Println(Same(tree.New(1), tree.New(2)))
 }
