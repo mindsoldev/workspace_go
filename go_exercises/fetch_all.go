@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"time"
 )
@@ -104,8 +103,6 @@ func fetch10(index int, url string, chanel chan<- string) {
 // Exercis e 1.11: Try fetchall with longer argument lists, such as samples from the top million web sites
 // available at alexa.com. How does the program behave if a web site just doesn't respond?
 
-var done = make(chan struct{})
-
 // Test it: go run . fetchAll11 http://hetpecset.hu http://vra.hu http://google.com http://alexa.com
 // May be Alexa runs into timeout, others not
 func fetchAll11(urls ...string) {
@@ -115,23 +112,10 @@ func fetchAll11(urls ...string) {
 		go fetch11(url, chanel)
 	}
 
-	waitForCancel11()
-
 	for range urls {
 		fmt.Println(<-chanel)
 	}
 	fmt.Printf("%.2fs elapsed\n", time.Since(start).Seconds())
-}
-
-func waitForCancel11() {
-	chanel := make(chan os.Signal)
-	signal.Notify(chanel, os.Interrupt)
-	go func() {
-		for range chanel {
-			close(done)
-			return
-		}
-	}()
 }
 
 func fetch11(url string, chanel chan<- string) {
