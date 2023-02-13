@@ -34,6 +34,10 @@ var StubStorage = stubMapping{
 	"fetchAll16":      fetchAll16,
 	"fetchAll10":      fetchAll10,
 	"fetchAll11":      fetchAll11,
+	"server1":         server1_main,
+	"server2":         server2_main,
+	"server3":         server3_main,
+	"lissajous":       lissajous_main,
 }
 
 func Call(funcName string, params ...interface{}) (result interface{}, err error) {
