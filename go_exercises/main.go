@@ -38,6 +38,9 @@ var StubStorage = stubMapping{
 	"server2":         server2_main,
 	"server3":         server3_main,
 	"lissajous":       lissajous_main,
+	"movie":           movie_main,
+	"issues":          issues_main,
+	"issuesByAges":    issuesByAges_main,
 }
 
 func Call(funcName string, params ...interface{}) (result interface{}, err error) {
