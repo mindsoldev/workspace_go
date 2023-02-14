@@ -2,9 +2,11 @@ go 1.19
 
 use (
 	./go_exercises
+	./go_json_exercises
 	./hello
 	./http_client_test
 	./iszt_test
+	./iszt_test2
 	./rest-sql
 	./rest_and_test
 	./web-service-gin
